@@ -138,4 +138,30 @@ const getUserGroups = async (req, res) => {
 };
 
 
-module.exports = { removeUserFromGroup, getGroupMessages,sendGroupMessage,createGroup ,getUserGroups};
+const deleteGroup = async (req, res) => {
+  try {
+    const { groupId, adminId } = req.body;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    if (group.admin.toString() !== adminId) {
+      return res.status(403).json({ error: "Only the admin can delete this group" });
+    }
+
+    // Delete all messages in the group
+    await GroupMessage.deleteMany({ group: groupId });
+
+    // Delete the group itself
+    await Group.findByIdAndDelete(groupId);
+
+    res.json({ message: "Group deleted successfully" });
+  } catch (err) {
+    console.error("Delete group error:", err);
+    res.status(500).json({ error: "Failed to delete group" });
+  }
+};
+
+module.exports = { removeUserFromGroup, getGroupMessages,sendGroupMessage,createGroup ,getUserGroups, deleteGroup };
