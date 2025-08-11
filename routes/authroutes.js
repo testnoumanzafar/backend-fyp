@@ -8,7 +8,7 @@ userRouter.post('/register',upload.single("picture"),  Register);
 userRouter.post('/login', Login);
 userRouter.get('/fetch', fetchallUser);
 
-
+// hi
 userRouter.get("/profile", authenticateUser, getProfile);
 userRouter.delete('/delete/:id', deleteUser);
 
