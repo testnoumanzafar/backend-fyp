@@ -8,7 +8,7 @@ const {
   removeUserFromGroup,
   getUserGroups,
   deleteGroup
-} = require('../controller/groupController');
+} = require('../Controller/groupController');
 // const { createGroup } = require('../Controller/groupController');
 
 router.post('/create', upload.single('groupImage'), createGroup);
