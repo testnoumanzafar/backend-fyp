@@ -1,8 +1,4 @@
 
-
-
-// for both 
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -14,7 +10,6 @@ const userRouter = require('./routes/authroutes');
 const messageRouter = require('./routes/messageRoutes');
 const groupRouter = require('./routes/groupRoutes');
 
-// Import Group model for auto-joining
 const Group = require('./models/group');
 
 const app = express();
@@ -27,7 +22,7 @@ const io = new Server(server, {
   },
 });
 
-app.set('io', io); // expose io to use it in route handlers if needed
+app.set('io', io);  
 
 app.use(cors());
 app.use(express.json());
@@ -90,10 +85,10 @@ app.post('/debug/map-user', (req, res) => {
 const onlineUsers = new Map(); // userId -> socketId mapping for online users
 const userSocketMap = new Map(); // Additional mapping for video calls (same as onlineUsers but clearer naming)
 
-// ✅ Socket.IO connections for both personal and group messaging
+// Socket.IO connections for both personal and group messaging
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-  console.log('⚠️  REMINDER: User must call socket.emit("userOnline", userId) to enable video calls');
+  console.log('  REMINDER: User must call socket.emit("userOnline", userId) to enable video calls');
 
   // Helper function to get socket ID by user ID
   function getUserSocketId(userId) {
@@ -112,35 +107,30 @@ io.on('connection', (socket) => {
   }
 
 
-  // socket.on("userOnline", (userId) => {
-  //   onlineUsers.set(userId, socket.id);
-  //   console.log(`User ${userId} is online`);
-  //   io.emit("updateUserStatus", { userId, status: "online" });
-  // });
+ 
   socket.on("userOnline", async (userId) => {
     onlineUsers.set(userId, socket.id);
     userSocketMap.set(userId, socket.id); // Also update video call mapping
-    console.log(`🟢 User ${userId} mapped to socket ${socket.id}`);
-    console.log(`📊 Total online users: ${userSocketMap.size}`);
+    console.log(` User ${userId} mapped to socket ${socket.id}`);
+    console.log(` Total online users: ${userSocketMap.size}`);
 
-    // 🚀 CRITICAL: Auto-join user to ALL their groups for video calls
     try {
       const userGroups = await getUserGroups(userId);
       
       for (const group of userGroups) {
         socket.join(group._id.toString());
-        console.log(`🏠 User ${userId} auto-joined group ${group._id} (${group.name})`);
+        console.log(` User ${userId} auto-joined group ${group._id} (${group.name})`);
       }
       
-      console.log(`✅ User ${userId} joined ${userGroups.length} group rooms for video calls`);
+      console.log(` User ${userId} joined ${userGroups.length} group rooms for video calls`);
     } catch (error) {
-      console.error(`❌ Failed to auto-join groups for user ${userId}:`, error);
+      console.error(` Failed to auto-join groups for user ${userId}:`, error);
     }
 
     // Inform everyone else
     io.emit("updateUserStatus", { userId, status: "online" });
 
-    // ✅ Send all currently online users back to this user
+    //  Send all currently online users back to this user
     const onlineUserIds = Array.from(onlineUsers.keys());
     socket.emit("initialOnlineUsers", onlineUserIds);
   });
@@ -155,13 +145,13 @@ io.on('connection', (socket) => {
       if (id === socket.id) {
         onlineUsers.delete(userId);
         userSocketMap.delete(userId); // Also remove from video call mapping
-        console.log(`🔴 User ${userId} removed from socket map`);
+        console.log(` User ${userId} removed from socket map`);
         io.emit("updateUserStatus", { userId, status: "offline" });
         break;
       }
     }
     
-    console.log(`📊 Remaining online users: ${userSocketMap.size}`);
+    console.log(` Remaining online users: ${userSocketMap.size}`);
   });
 
 
@@ -174,11 +164,7 @@ io.on('connection', (socket) => {
     console.log(`User joined personal room: ${room}`);
   });
 
-  // socket.on('sendMessage', (data) => {
-  //   const room = [data.senderId, data.receiverId].sort().join('_');
-  //   io.to(room).emit('receiveMessage', data);
-  //   console.log(`Message sent in room ${room}:`, data);
-  // });
+ 
 
 
 
@@ -191,7 +177,7 @@ io.on('connection', (socket) => {
   // Send message to room
   io.to(room).emit('receiveMessage', data);
 
-  // ✅ Notify both sender and receiver to move the other user to top
+  //  Notify both sender and receiver to move the other user to top
   const senderSocket = onlineUsers.get(data.senderId);
   const receiverSocket = onlineUsers.get(data.receiverId);
 
@@ -220,29 +206,29 @@ io.on('connection', (socket) => {
     
     // If caller is not in socket map, try to add them
     if (!userSocketMap.has(callData.callerId)) {
-      console.log(`⚠️  Auto-mapping caller ${callData.callerId} to socket ${socket.id}`);
+      console.log(`  Auto-mapping caller ${callData.callerId} to socket ${socket.id}`);
       userSocketMap.set(callData.callerId, socket.id);
       onlineUsers.set(callData.callerId, socket.id);
     }
     
     // Debug: Show all mapped users
-    console.log('📋 Current user socket mapping:', Array.from(userSocketMap.entries()));
+    console.log(' Current user socket mapping:', Array.from(userSocketMap.entries()));
     
     const receiverSocketId = getUserSocketId(callData.receiverId);
-    console.log(`🔍 Looking for receiver ${callData.receiverId}`);
-    console.log(`📍 Found socket ID: ${receiverSocketId}`);
+    console.log(` Looking for receiver ${callData.receiverId}`);
+    console.log(` Found socket ID: ${receiverSocketId}`);
     
     if (receiverSocketId) {
       io.to(receiverSocketId).emit('incomingVideoCall', {
         ...callData,
         callId: socket.id
       });
-      console.log(`✅ Video call invitation sent to ${callData.receiverName} (${callData.receiverId})`);
+      console.log(` Video call invitation sent to ${callData.receiverName} (${callData.receiverId})`);
     } else {
       // Receiver is offline
-      console.log('❌ Video call failed - receiver not found in socket map');
-      console.log('💡 Make sure receiver called userOnline event');
-      console.log('💡 Frontend should call: socket.emit("userOnline", userId) when user logs in');
+      console.log(' Video call failed - receiver not found in socket map');
+      console.log(' Make sure receiver called userOnline event');
+      console.log(' Frontend should call: socket.emit("userOnline", userId) when user logs in');
       socket.emit('videoCallFailed', { 
         message: `${callData.receiverName} is currently offline`,
         receiverId: callData.receiverId 
@@ -303,7 +289,7 @@ io.on('connection', (socket) => {
     
     // If caller is not in socket map, try to add them
     if (!userSocketMap.has(callData.callerId)) {
-      console.log(`⚠️  Auto-mapping caller ${callData.callerId} to socket ${socket.id}`);
+      console.log(`  Auto-mapping caller ${callData.callerId} to socket ${socket.id}`);
       userSocketMap.set(callData.callerId, socket.id);
       onlineUsers.set(callData.callerId, socket.id);
     }
@@ -311,7 +297,7 @@ io.on('connection', (socket) => {
     // Debug: Show who's in the group room
     const groupRoom = io.sockets.adapter.rooms.get(callData.groupId);
     const membersInRoom = groupRoom ? Array.from(groupRoom) : [];
-    console.log(`📊 Group ${callData.groupId} has ${membersInRoom.length} connected members:`, membersInRoom);
+    console.log(` Group ${callData.groupId} has ${membersInRoom.length} connected members:`, membersInRoom);
     
     // Send invitation to all group members except caller
     socket.to(callData.groupId).emit('incomingVideoCall', {
@@ -319,7 +305,7 @@ io.on('connection', (socket) => {
       callId: socket.id
     });
     
-    console.log(`📞 Group call invitation sent to ${membersInRoom.length - 1} members (excluding caller)`);
+    console.log(` Group call invitation sent to ${membersInRoom.length - 1} members (excluding caller)`);
   });
 
   // Group Video Call Acceptance (when a group member joins)
@@ -379,41 +365,21 @@ io.on('connection', (socket) => {
     }
   });
 
+  // socket.on('sendGroupMessage', (data) => {
+  //   io.to(data.groupId).emit('receiveGroupMessage', data);
+  //   console.log(`Group message sent in ${data.groupId}:`, data);
+  // });
   socket.on('sendGroupMessage', (data) => {
-    io.to(data.groupId).emit('receiveGroupMessage', data);
-    console.log(`Group message sent in ${data.groupId}:`, data);
-  });
+  io.to(data.groupId).emit('receiveGroupMessage', data);
+  // Notify all group members to move the group to top and show notification
+  io.to(data.groupId).emit('moveGroupToTop', { groupId: data.groupId });
+  console.log(`Group message sent in ${data.groupId}:`, data);
+});
+
+
 
   // Note: disconnect handler is already defined above with video call cleanup
 });
-
-// show status online not issue in refresh the page issue in recevier not see immediately
-// io.on('connection', (socket) => {
-//   console.log('User connected:', socket.id);
-
-//   socket.on("userOnline", (userId) => {
-//     onlineUsers.set(userId, socket.id);
-//     console.log(`User ${userId} is online`);
-
-//     // Broadcast new user status
-//     io.emit("updateUserStatus", { userId, status: "online" });
-
-//     // ✅ Send all currently online users to just the new one
-//     const currentlyOnline = Array.from(onlineUsers.keys());
-//     socket.emit("initialOnlineUsers", currentlyOnline);
-//   });
-
-//   socket.on("disconnect", () => {
-//     for (let [userId, id] of onlineUsers.entries()) {
-//       if (id === socket.id) {
-//         onlineUsers.delete(userId);
-//         console.log(`User ${userId} disconnected`);
-//         io.emit("updateUserStatus", { userId, status: "offline" });
-//         break;
-//       }
-//     }
-//   });
-// });
 
  
 
