@@ -14,11 +14,29 @@ const Group = require('./models/group');
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:5173",           // dev frontend
+  "https://fyp-six-iota.vercel.app"  // prod frontend
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // Allow requests from the frontend URL or all origins
-  methods: ["GET", "POST","PUT", "DELETE", "OPTIONS"],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`Blocked CORS request from: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
+// app.use(cors({
+//   origin: allowedOrigins, // Allow requests from the frontend URL or all origins
+//   methods: ["GET", "POST","PUT", "DELETE", ],
+//   credentials: true
+// }));
 
 
 const server = http.createServer(app);
@@ -32,8 +50,9 @@ const server = http.createServer(app);
    
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || '*', // Allow requests from the frontend URL or all origins
-    methods: ["GET", "POST",, "PUT", "DELETE", "OPTIONS"],
+    origin: allowedOrigins, // Allow requests from the frontend URL or all origins
+    methods: ["GET", "POST", "PUT", "DELETE", ],
+    credentials: true
   },
 });
 
@@ -255,61 +274,16 @@ io.on('connection', (socket) => {
   });
 
   // Video Call Acceptance
-  // socket.on('acceptVideoCall', (callData) => {
-  //   console.log('Video call accepted:', callData);
-    
-  //   // Notify the caller
-  //   const callerSocketId = getUserSocketId(callData.callerId);
-  //   if (callerSocketId) {
-  //     io.to(callerSocketId).emit('videoCallAccepted', callData);
-  //     console.log(`Video call acceptance sent to caller ${callData.callerId}`);
-  //   }
-  // });
-  // Update the video call acceptance handler
-
-  // 4:33 update 
-socket.on('acceptVideoCall', (callData) => {
+  socket.on('acceptVideoCall', (callData) => {
     console.log('Video call accepted:', callData);
     
-    // Get socket IDs for both participants
+    // Notify the caller
     const callerSocketId = getUserSocketId(callData.callerId);
-    const receiverSocketId = getUserSocketId(callData.receiverId);
-    
-    // Verify that the person accepting is actually the intended receiver
-    if (callData.acceptedBy === callData.receiverId) {
-        // Generate the deterministic room name based on participant IDs
-        const participants = [callData.callerId, callData.receiverId].sort();
-        const roomName = `call-${participants.join('-')}`;
-        
-        // Create the final call data with the correct room name
-        const finalCallData = {
-            ...callData,
-            roomName: roomName,
-            participants: participants,
-            timestamp: new Date().toISOString()
-        };
-        
-        // Notify the caller with correct room name
-        if (callerSocketId) {
-            io.to(callerSocketId).emit('videoCallAccepted', finalCallData);
-        }
-        
-        // Notify the receiver with correct room name
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('videoCallAccepted', finalCallData);
-        }
-        
-        console.log(`Video call acceptance verified and processed with room: ${roomName}`);
-    } else {
-        console.log(`Invalid call acceptance attempt by user ${callData.acceptedBy}`);
-        const attemptingSocketId = getUserSocketId(callData.acceptedBy);
-        if (attemptingSocketId) {
-            io.to(attemptingSocketId).emit('videoCallError', {
-                message: 'You cannot accept calls intended for other users'
-            });
-        }
+    if (callerSocketId) {
+      io.to(callerSocketId).emit('videoCallAccepted', callData);
+      console.log(`Video call acceptance sent to caller ${callData.callerId}`);
     }
-});
+  });
 
   // Video Call Rejection
   socket.on('rejectVideoCall', (callData) => {
