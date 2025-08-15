@@ -164,4 +164,26 @@ const deleteGroup = async (req, res) => {
   }
 };
 
-module.exports = { removeUserFromGroup, getGroupMessages,sendGroupMessage,createGroup ,getUserGroups, deleteGroup };
+const deleteMemberFromGroup = async (req, res) => {
+  try {
+    const { groupId, userId } = req.params;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    // Remove the member
+    group.members.pull(userId);
+    await group.save();
+
+    res.json({ success: true, message: "Member removed", updatedGroup: group });
+  } catch (err) {
+    console.error("Remove member error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+
+module.exports = { removeUserFromGroup, getGroupMessages,sendGroupMessage,createGroup ,getUserGroups, deleteGroup,deleteMemberFromGroup };

@@ -7,7 +7,8 @@ const {
   getGroupMessages,
   removeUserFromGroup,
   getUserGroups,
-  deleteGroup
+  deleteGroup,
+  deleteMemberFromGroup
 } = require('../Controller/groupController');
 // const { createGroup } = require('../Controller/groupController');
 
@@ -18,5 +19,6 @@ router.get('/user/:userId', getUserGroups); // 👈 Add this
 
 router.put('/remove-user', removeUserFromGroup); // admin only
 router.delete('/delete', deleteGroup);
+router.delete("/:groupId/members/:userId", deleteMemberFromGroup);
 
 module.exports = router;

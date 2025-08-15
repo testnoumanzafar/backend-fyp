@@ -15,8 +15,8 @@ const Group = require('./models/group');
 const app = express();
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  methods: ["GET", "POST"],
+  origin: process.env.FRONTEND_URL || '*', // Allow requests from the frontend URL or all origins
+  methods: ["GET", "POST","PUT", "DELETE", "OPTIONS"],
   credentials: true
 }));
 
@@ -32,8 +32,8 @@ const server = http.createServer(app);
    
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL,
-    methods: ["GET", "POST"],
+    origin: process.env.FRONTEND_URL || '*', // Allow requests from the frontend URL or all origins
+    methods: ["GET", "POST",, "PUT", "DELETE", "OPTIONS"],
   },
 });
 
@@ -394,7 +394,33 @@ io.on('connection', (socket) => {
   console.log(`Group message sent in ${data.groupId}:`, data);
 });
 
+socket.on("getGroupMembers", async (groupId) => {
+  try {
+    // Get group with members
+    const group = await Group.findById(groupId).populate('members', '_id name'); 
+    if (!group) {
+      return socket.emit("groupMembers", { error: "Group not found" });
+    }
 
+    // Build members array with online status
+    const membersData = group.members.map(member => ({
+      _id: member._id,
+      name: member.name,
+      online: onlineUsers.has(member._id.toString())
+    }));
+
+    // Send back to the requester
+    socket.emit("groupMembers", {
+      groupId: groupId,
+      total: membersData.length,
+      members: membersData
+    });
+
+  } catch (error) {
+    console.error("Error fetching group members:", error);
+    socket.emit("groupMembers", { error: "Failed to fetch group members" });
+  }
+});
 
   // Note: disconnect handler is already defined above with video call cleanup
 });
