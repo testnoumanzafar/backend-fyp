@@ -14,11 +14,29 @@ const Group = require('./models/group');
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:5173",           // dev frontend
+  "https://fyp-six-iota.vercel.app"  // prod frontend
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // Allow requests from the frontend URL or all origins
-  methods: ["GET", "POST","PUT", "DELETE", "OPTIONS"],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`Blocked CORS request from: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
+// app.use(cors({
+//   origin: allowedOrigins, // Allow requests from the frontend URL or all origins
+//   methods: ["GET", "POST","PUT", "DELETE", ],
+//   credentials: true
+// }));
 
 
 const server = http.createServer(app);
@@ -32,8 +50,9 @@ const server = http.createServer(app);
    
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || '*', // Allow requests from the frontend URL or all origins
-    methods: ["GET", "POST",, "PUT", "DELETE", "OPTIONS"],
+    origin: allowedOrigins, // Allow requests from the frontend URL or all origins
+    methods: ["GET", "POST", "PUT", "DELETE", ],
+    credentials: true
   },
 });
 
