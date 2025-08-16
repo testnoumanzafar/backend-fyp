@@ -14,7 +14,7 @@ const NewUser = require("../models/register.js")
     }
 
     const adminUser = await NewUser.findById(adminId);
-    if (adminUser.email !== 'nouman@gmail.com') {
+    if (adminUser.email !== 'danishali@danverium.site') {
       return res.status(403).json({ error: 'Only admin can create groups' });
     }
 
